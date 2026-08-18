@@ -1,0 +1,27 @@
+const fs = require('fs');
+const path = require('path');
+
+const filepath = path.join(__dirname, 'extracted', 'page-frame.html');
+if (!fs.existsSync(filepath)) {
+  console.error('File not found!');
+  process.exit(1);
+}
+
+const content = fs.readFileSync(filepath, 'utf-8');
+
+// Search for mcu_byte 1 to 12
+const bytes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+bytes.forEach(b => {
+  const term = `mcu_byte${b}`;
+  let idx = 0;
+  console.log(`\n=================== SEARCHING FOR: ${term} ===================`);
+  let count = 0;
+  while ((idx = content.indexOf(term, idx)) !== -1 && count < 8) {
+    const start = Math.max(0, idx - 180);
+    const end = Math.min(content.length, idx + term.length + 180);
+    console.log(`  Match ${count+1}: ... ${content.slice(start, end).replace(/\s+/g, ' ')} ...`);
+    idx += term.length;
+    count++;
+  }
+});

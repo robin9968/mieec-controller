@@ -1,0 +1,746 @@
+<title>Rollensteuerung</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root {
+    --bg: #12100d;
+    --surface: #1c1914;
+    --surface-2: #262119;
+    --surface-3: #322b20;
+    --line: #3a3226;
+    --text: #f2e9d8;
+    --text-dim: #a89d8b;
+    --text-faint: #6b6255;
+    --accent: #e8934a;
+    --accent-dim: #8a5a31;
+    --good: #7fae6e;
+    --warn: #d9b23d;
+    --critical: #d1594a;
+    --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Semibold", system-ui, sans-serif;
+    --font-body: -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
+
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 20px 16px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  header.page {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 4px 2px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  header.page h1 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 0; }
+  header.page .subtitle { font-size: 12px; color: var(--text-faint); font-family: var(--font-mono); }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 10px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .eyebrow .note { color: var(--text-faint); text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+  .status-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px;
+    padding: 5px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-dim);
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); }
+  .pill.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, var(--line)); }
+  .pill.good .dot { background: var(--good); box-shadow: 0 0 6px var(--good); }
+  .pill.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+  .pill.warn .dot { background: var(--warn); }
+  .pill.critical { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 40%, var(--line)); }
+  .pill.critical .dot { background: var(--critical); }
+
+  button {
+    font-family: var(--font-display); font-size: 14px; font-weight: 600; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--text); padding: 11px 16px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  button:active { background: var(--surface-3); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1a1208; }
+  button.primary:active { background: color-mix(in srgb, var(--accent) 85%, black); }
+  button.danger { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, var(--line)); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.full { width: 100%; }
+
+  label {
+    display: block; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 6px;
+  }
+  input[type="text"], input[type="number"], select {
+    font-family: var(--font-mono); font-size: 14px; background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 8px; color: var(--text); padding: 10px 12px; width: 100%;
+  }
+  select { font-family: var(--font-body); appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a89d8b'><path d='M7 10l5 5 5-5z'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+  input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .field-row { display: flex; gap: 8px; align-items: flex-end; }
+  .field-row > div:first-child { flex: 1; }
+
+  .help { font-size: 12px; color: var(--text-faint); line-height: 1.5; margin-top: 8px; }
+  .help code { font-family: var(--font-mono); color: var(--text-dim); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  .brake-hero { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 8px 0 4px; }
+  .brake-readout {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 64px; font-weight: 700;
+    color: var(--accent); min-width: 2ch; text-align: center; line-height: 1;
+  }
+  .stepper-btn { width: 52px; height: 52px; border-radius: 50%; font-size: 22px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .brake-caption { text-align: center; font-size: 12px; color: var(--text-faint); font-family: var(--font-mono); margin-top: 2px; }
+
+  .mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+  .mode-btn { text-align: center; font-family: var(--font-body); font-weight: 500; font-size: 12.5px; padding: 12px 6px; }
+  .mode-btn.selected { background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); border-color: var(--accent-dim); color: var(--accent); }
+
+  .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .status-item .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+  .status-item .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 18px; color: var(--text); margin-top: 2px; }
+
+  .slider-row { margin-bottom: 16px; }
+  .slider-row:last-child { margin-bottom: 0; }
+  .slider-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .slider-label .name { font-size: 13px; color: var(--text); font-family: var(--font-body); }
+  .slider-label .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--accent); }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: var(--surface-2);
+    border: 1px solid var(--line); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent);
+    border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--accent-dim); cursor: pointer;
+  }
+
+  .toggle-list { display: flex; flex-direction: column; gap: 14px; }
+  .toggle-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .toggle-info { display: flex; flex-direction: column; gap: 2px; }
+  .toggle-title { font-size: 13.5px; color: var(--text); }
+  .toggle-desc { font-size: 11.5px; color: var(--text-faint); }
+  .switch { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-switch { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--line); transition: 0.2s; border-radius: 999px; cursor: pointer; }
+  .slider-switch::before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: var(--text-dim); border-radius: 50%; transition: 0.2s; }
+  input:checked + .slider-switch { background: color-mix(in srgb, var(--accent) 30%, var(--surface-2)); border-color: var(--accent-dim); }
+  input:checked + .slider-switch::before { transform: translateX(18px); background: var(--accent); }
+
+  .byte-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .byte-field label { margin-bottom: 4px; }
+
+  details.card { padding: 0; overflow: hidden; }
+  details.card summary {
+    list-style: none; cursor: pointer; padding: 14px 16px; font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; justify-content: space-between;
+  }
+  details.card summary::-webkit-details-marker { display: none; }
+  details.card summary::after { content: "＋"; color: var(--text-faint); font-family: var(--font-body); }
+  details.card[open] summary::after { content: "－"; }
+  details.card .body { padding: 0 16px 16px; }
+
+  #log {
+    font-family: var(--font-mono); font-size: 11px; line-height: 1.6; color: var(--text-dim); max-height: 240px;
+    overflow-y: auto; overflow-x: auto; white-space: pre; background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px;
+  }
+  #rawFrame { font-family: var(--font-mono); font-size: 12px; color: var(--warn); word-break: break-all; margin-top: 8px; }
+
+  .actions { display: flex; gap: 8px; }
+  .actions > button { flex: 1; }
+
+  .warning-banner {
+    background: color-mix(in srgb, var(--critical) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--critical) 45%, var(--line));
+    color: var(--critical); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.5;
+  }
+</style>
+
+<main>
+  <header class="page">
+    <h1>Rollensteuerung</h1>
+    <span class="subtitle">DMK SilverFeather ETA Plus DC</span>
+  </header>
+
+  <div id="unsupportedWarning" class="warning-banner" hidden>
+    <strong>Web Bluetooth nicht verfügbar.</strong><br>
+    Diese Seite muss in <strong>Bluefy</strong> oder <strong>WebBLE</strong> geöffnet werden – Safari kann das nicht.
+  </div>
+
+  <section class="card">
+    <p class="eyebrow">Verbindung</p>
+    <div class="status-row" style="margin-bottom: 14px;">
+      <span class="pill" id="statusPill"><span class="dot"></span><span id="statusText">Getrennt</span></span>
+      <span class="pill" id="devicePill" hidden></span>
+    </div>
+    <div class="actions">
+      <button class="primary" id="connectBtn">Rolle suchen &amp; verbinden</button>
+      <button class="danger" id="disconnectBtn" hidden>Trennen</button>
+    </div>
+
+    <details style="margin-top: 12px;">
+      <summary style="cursor: pointer; font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em;">Falls die Verbindung fehlschlägt: manuelle Service-UUID</summary>
+      <div class="field-row" style="margin-top: 10px;">
+        <div>
+          <label for="svcUuid">Service-UUID (optional)</label>
+          <input type="text" id="svcUuid" placeholder="z.B. 0000fff0-0000-1000-8000-00805f9b34fb">
+        </div>
+      </div>
+      <p class="help">
+        Die App probiert automatisch eine Liste gängiger BLE-Modul-UUIDs. Nur falls das nicht reicht: mit
+        <strong>nRF Connect for Mobile</strong> einmal verbinden, unter „Services" die custom UUID kopieren, hier eintragen.
+      </p>
+    </details>
+  </section>
+
+  <section class="card" id="liveStatusCard" hidden>
+    <p class="eyebrow">Status (von der Rolle gemeldet)</p>
+    <div class="status-grid">
+      <div class="status-item"><div class="k">Bremsstufe</div><div class="v" id="reportedBrake">–</div></div>
+      <div class="status-item"><div class="k">Modus</div><div class="v" id="reportedMode">–</div></div>
+      <div class="status-item"><div class="k">Letzter Wurf</div><div class="v" id="reportedDistance">–</div></div>
+      <div class="status-item"><div class="k">Max. Spulendrehzahl</div><div class="v" id="reportedSpeed">–</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Bremsstufe</p>
+    <div class="brake-hero">
+      <button class="stepper-btn" id="brakeDown" aria-label="Bremsstufe verringern">－</button>
+      <div class="brake-readout" id="brakeReadout">4</div>
+      <button class="stepper-btn" id="brakeUp" aria-label="Bremsstufe erhöhen">＋</button>
+    </div>
+    <div class="brake-caption">刹车挡位 · mcu_byte2 · Stufe 1–12</div>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Bremsprofil</p>
+    <div class="mode-grid" id="modeGrid"></div>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Bremskurve<span class="note">getestet</span></p>
+    <div class="slider-row">
+      <div class="slider-label"><span class="name">Feineinstellung</span><span class="val" id="valFine">0%</span></div>
+      <input type="range" id="sliderFine" min="0" max="100" value="0">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span class="name">Vorbremse (Anfangsphase)</span><span class="val" id="valFront">0%</span></div>
+      <input type="range" id="sliderFront" min="0" max="100" value="0">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span class="name">Rückbremse (Landephase)</span><span class="val" id="valRear">0%</span></div>
+      <input type="range" id="sliderRear" min="0" max="100" value="0">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span class="name">Zielwurf-Distanzbremse</span><span class="val" id="valTarget">Aus</span></div>
+      <input type="range" id="sliderTarget" min="0" max="50" value="0">
+    </div>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">System<span class="note">getestet</span></p>
+    <div class="slider-row">
+      <div class="slider-label"><span class="name">Standby-Abschaltung</span><span class="val" id="valStandby">10 Min.</span></div>
+      <input type="range" id="sliderStandby" min="60" max="900" step="9" value="600">
+    </div>
+    <div class="field-row">
+      <div>
+        <label for="spoolSelect">Wurfsound-Modus</label>
+        <select id="spoolSelect">
+          <option value="0">Modus 1</option>
+          <option value="1">Modus 2</option>
+          <option value="2">Modus 3</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row" style="margin-top: 10px;">
+      <div>
+        <label for="reelModelSelect">Rollentyp</label>
+        <select id="reelModelSelect">
+          <option value="0">Far Cast Baitcaster (远投型水滴轮)</option>
+          <option value="1">BFS Round Profile (微物型鼓轮)</option>
+          <option value="2">General Round Profile (泛用型鼓轮)</option>
+          <option value="3">Heavy Spool (巨物型鼓轮)</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Optionen<span class="note">getestet</span></p>
+    <div class="toggle-list" id="toggleList"></div>
+  </section>
+
+  <button class="primary full" id="saveBtn" disabled>Speichern (an Rolle senden)</button>
+
+  <details class="card">
+    <summary>Erweitert (unbestätigte Felder)</summary>
+    <div class="body">
+      <div class="byte-grid" id="advancedGrid"></div>
+      <p class="help">Aus dem App-Code extrahiert, Übertragungsweg oder Wirkung nicht abschließend bestätigt (u.a. Systemstimme, Tastenbelegung). Wert ändern, „Erweitert senden" drücken, an der Rolle beobachten.</p>
+      <button class="full" id="sendExtendedBtn" style="margin-top: 10px;" disabled>Erweitert senden (2. Frame)</button>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary>Debug-Log &amp; Rohdaten</summary>
+    <div class="body">
+      <div id="rawFrame">Noch kein Frame empfangen.</div>
+      <div id="log" style="margin-top: 10px;"></div>
+    </div>
+  </details>
+</main>
+
+<script>
+  // ================= Protokoll =================
+  // Frame-Layout (20 Bytes), reverse-engineered aus combineValue() der offiziellen
+  // WeChat-Mini-App (MIEC) und über zwei unabhängige Sessions gegengeprüft:
+  // [A5][flags][byte1..byte9][checksum][5A][byte10,11,12,17,18][99][byte61]
+  // checksum = (flags + byte1+...+byte9) mod 256
+
+  const state = {
+    mode: 1,
+    brakeLevel: 4,      // byte2, 1-12
+    fineTune: 0,        // byte3, 0-100%
+    spoolSound: 0,       // byte4, 0-2
+    standbySeconds: 600, // gesendet als round(x/9) in byte5
+    targetDistance: 0,   // byte7, 0-50 (0 = aus)
+    frontBrake: 0,        // byte8, 0-100%
+    rearBrake: 0,          // byte9, 0-100%
+    reelModel: 0,           // byte61, 0-3
+
+    mute: false,            // bool1
+    waterLandingBrake: false, // bool2
+    ledEffects: true,          // bool3
+    disableDcSound: false,      // bool4
+    castMelody: false,           // bool5
+    smartBrake: false,            // bool6
+    antiTheft: false,              // bool7
+
+    // Unbestätigt / nicht sicher verdrahtet:
+    voice: 0,             // byte60
+    byte10: 0, byte11: 0, byte12: 0, byte17: 0, byte18: 0,
+
+    // Zweiter, unabhängiger Frame (Tastenbelegung etc.), unbestätigt:
+    byte13: 9, byte14: 9, byte15: 9, byte16: 9, byte19: 9, byte20: 1,
+    byte21: 9, byte22: 9, byte23: 9, byte24: 9, byte25: 9, byte26: 9,
+    byte27: 0, byte28: 9, byte29: 0, byte30: 1, byte31: 2, byte32: 9
+  };
+
+  const MODES = [
+    { id: 0, name: "Experte" },
+    { id: 1, name: "Allround" },
+    { id: 2, name: "BFS" },
+    { id: 3, name: "Wind" },
+    { id: 4, name: "Training" }
+  ];
+
+  const FIXED_BYTE6 = 99; // Spulen-Gewichtskonstante, nicht editierbar
+
+  function buildCommandFrame(s) {
+    const bits = `${s.antiTheft ? 1 : 0}${s.smartBrake ? 1 : 0}${s.castMelody ? 1 : 0}${s.disableDcSound ? 1 : 0}${s.ledEffects ? 1 : 0}${s.waterLandingBrake ? 1 : 0}${s.mute ? 1 : 0}1`;
+    const flagByte = parseInt(bits, 2);
+    const standbyByte = Math.round(s.standbySeconds / 9) & 0xff;
+    const b1to9 = [s.mode, s.brakeLevel, s.fineTune, s.spoolSound, standbyByte, FIXED_BYTE6, s.targetDistance, s.frontBrake, s.rearBrake];
+    const sum = flagByte + b1to9.reduce((a, b) => a + b, 0);
+    const checksum = sum & 0xff;
+    return new Uint8Array([0xa5, flagByte, ...b1to9, checksum, 0x5a, s.byte10, s.byte11, s.byte12, s.byte17, s.byte18, 0x99, s.reelModel]);
+  }
+
+  function buildExtendedSettingsFrame(s) {
+    return new Uint8Array([
+      0x5a, s.byte13, s.byte14, s.byte15, s.byte16, s.byte19, s.byte20, s.byte28,
+      s.byte21, s.byte22, s.byte23, s.byte24, s.byte25, s.byte26, s.byte27,
+      s.byte29, s.byte30, s.byte31, s.byte32, 0xa5
+    ]);
+  }
+
+  // Eingehende Statusmeldung parsen. Indizes beziehen sich auf das komplette
+  // empfangene Rohpaket (inkl. führendem 0xA5), nicht auf ein gestripptes Payload.
+  function parseNotification(raw) {
+    if (raw.length < 4) return { type: "unknown", raw };
+
+    if (raw[0] === 0x45) {
+      return { type: "castHistory", raw };
+    }
+    if (raw[1] === 66 && raw[2] === 99) {
+      return { type: "deviceInfo", raw };
+    }
+    if (raw[0] !== 0xa5 || raw.length < 13) {
+      return { type: "unknown", raw };
+    }
+
+    const brakeAndMode = raw[1];
+    const result = {
+      type: "status",
+      modeIndex: brakeAndMode % 10,
+      brakeLevel: Math.floor(brakeAndMode / 10),
+      fineTune: raw[2],
+      standbySeconds: raw[5] * 9,
+      targetDistance: raw[7],
+      maxSpeedRpm: raw[9] | (raw[10] << 8),
+      lastCastDistanceM: (raw[11] | (raw[12] << 8)) / 10
+    };
+    if (raw.length >= 19) {
+      result.frontBrake = raw[17];
+      result.rearBrake = raw[18];
+    }
+    return result;
+  }
+
+  // ================= BLE =================
+
+  // Gängige UUIDs verbreiteter billiger BLE-UART-Module (HM-10/CH573 & Co.) –
+  // deckt viele "No-Name" BLE-MCUs ab, darunter vermutlich auch die Rolle.
+  const CANDIDATE_SERVICE_UUIDS = [
+    "0000ffe0-0000-1000-8000-00805f9b34fb",
+    "0000fee7-0000-1000-8000-00805f9b34fb",
+    "0000ae00-0000-1000-8000-00805f9b34fb",
+    "0000ffe5-0000-1000-8000-00805f9b34fb"
+  ];
+
+  let device = null, server = null, writeChar = null, notifyChar = null;
+
+  function describeProps(p) {
+    const parts = [];
+    if (p.read) parts.push("read");
+    if (p.write) parts.push("write");
+    if (p.writeWithoutResponse) parts.push("writeWithoutResponse");
+    if (p.notify) parts.push("notify");
+    if (p.indicate) parts.push("indicate");
+    return parts.join(", ") || "(keine)";
+  }
+
+  function pickWriteCharacteristic(chars) {
+    const strict = chars.find(c => c.properties.write && c.properties.writeWithoutResponse && !c.properties.notify && !c.properties.indicate && !c.properties.read);
+    if (strict) return strict;
+    return chars.find(c => c.properties.write || c.properties.writeWithoutResponse);
+  }
+
+  function pickNotifyCharacteristic(chars) {
+    const strict = chars.find(c => c.properties.notify && !c.properties.indicate && !c.properties.read && !c.properties.write && !c.properties.writeWithoutResponse);
+    if (strict) return strict;
+    return chars.find(c => c.properties.notify);
+  }
+
+  function toHex(bytes) {
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, "0").toUpperCase()).join(" ");
+  }
+
+  function log(msg) {
+    const el = document.getElementById("log");
+    const line = document.createElement("div");
+    line.textContent = msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+    console.log("[ReelBLE]", msg);
+  }
+
+  window.addEventListener("error", (e) => log(`JS-Fehler: ${e.message} (${e.filename}:${e.lineno}:${e.colno})`));
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e.reason;
+    log(`Unbehandelte Promise-Ablehnung: ${r && r.message ? r.message : JSON.stringify(r)}`);
+  });
+
+  function withTimeout(promise, ms, label) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Zeitüberschreitung (${ms / 1000}s) bei: ${label}`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  }
+
+  function setStatus(kind, text) {
+    const pill = document.getElementById("statusPill");
+    const txt = document.getElementById("statusText");
+    pill.className = "pill" + (kind ? " " + kind : "");
+    const labels = {
+      disconnected: "Getrennt", scanning: "Suche …", connecting: "Verbinde …",
+      discovering: "Suche Services …", connected: "Verbunden", failed: "Fehler"
+    };
+    txt.textContent = text || labels[kind] || kind;
+    document.getElementById("saveBtn").disabled = kind !== "connected";
+    document.getElementById("sendExtendedBtn").disabled = kind !== "connected";
+    document.getElementById("disconnectBtn").hidden = kind !== "connected";
+    document.getElementById("liveStatusCard").hidden = kind !== "connected";
+  }
+
+  async function connect() {
+    const manualUuid = document.getElementById("svcUuid").value.trim();
+    if (manualUuid) localStorage.setItem("reel_svc_uuid", manualUuid);
+    const optionalServices = [...new Set([...CANDIDATE_SERVICE_UUIDS, ...(manualUuid ? [manualUuid] : [])])];
+
+    try {
+      setStatus("scanning");
+      log('Öffne Geräteauswahl … bitte im Dialog auf die Rolle tippen (Name beginnt mit "FSQ").');
+      device = await withTimeout(
+        navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: "FSQ" }],
+          optionalServices
+        }),
+        90000,
+        "Geräteauswahl (requestDevice)"
+      );
+      log(`Gerät gewählt: ${device.name || "(ohne Namen)"}`);
+      device.addEventListener("gattserverdisconnected", onDisconnected);
+
+      const devicePill = document.getElementById("devicePill");
+      devicePill.hidden = false;
+      devicePill.textContent = device.name || "Gerät";
+
+      setStatus("connecting");
+      log("Baue GATT-Verbindung auf …");
+      server = await withTimeout(device.gatt.connect(), 12000, "GATT-Verbindung aufbauen");
+      log("GATT verbunden.");
+
+      setStatus("discovering");
+      log("Frage verfügbare Services ab …");
+      const services = await withTimeout(server.getPrimaryServices(), 12000, "Services abfragen");
+      if (services.length === 0) throw new Error("Keine Services gefunden (Service-UUID evtl. nicht in optionalServices enthalten).");
+      log(`${services.length} Service(s) gefunden: ${services.map(s => s.uuid).join(", ")}`);
+
+      let chars = [];
+      for (const s of services) {
+        const c = await withTimeout(s.getCharacteristics(), 12000, `Characteristics von ${s.uuid} abfragen`);
+        for (const ch of c) log(`Service ${s.uuid} · Characteristic ${ch.uuid}: ${describeProps(ch.properties)}`);
+        chars = chars.concat(c);
+      }
+
+      writeChar = pickWriteCharacteristic(chars);
+      notifyChar = pickNotifyCharacteristic(chars);
+
+      if (!writeChar) {
+        log(`Keine passende Write-Characteristic gefunden unter ${chars.length} Characteristic(s).`);
+        setStatus("failed", "Keine Write-Characteristic gefunden");
+        return;
+      }
+      log(`Write-Characteristic: ${writeChar.uuid}`);
+
+      if (notifyChar) {
+        await notifyChar.startNotifications();
+        notifyChar.addEventListener("characteristicvaluechanged", onNotify);
+        log(`Notify-Characteristic: ${notifyChar.uuid}, abonniert`);
+      } else {
+        log("Keine Notify-Characteristic gefunden – Status-Updates evtl. nicht verfügbar.");
+      }
+
+      setStatus("connected");
+      await sendFrame(buildCommandFrame(state));
+    } catch (e) {
+      log("Fehler: " + e.message);
+      setStatus("failed", e.message);
+    }
+  }
+
+  function disconnect() {
+    if (device && device.gatt.connected) device.gatt.disconnect();
+  }
+
+  function onDisconnected() {
+    log("Getrennt");
+    writeChar = null;
+    notifyChar = null;
+    setStatus("disconnected");
+    document.getElementById("devicePill").hidden = true;
+  }
+
+  let lastWriteTime = 0;
+
+  async function sendFrame(bytes) {
+    if (!writeChar) { log("Senden fehlgeschlagen: nicht verbunden"); return; }
+    lastWriteTime = Date.now();
+    try {
+      if (writeChar.properties.writeWithoutResponse) {
+        await writeChar.writeValueWithoutResponse(bytes);
+      } else {
+        await writeChar.writeValueWithResponse(bytes);
+      }
+      log("Gesendet: " + toHex(bytes));
+    } catch (e) {
+      log("Schreibfehler: " + e.message);
+    }
+  }
+
+  function onNotify(event) {
+    const bytes = new Uint8Array(event.target.value.buffer);
+    document.getElementById("rawFrame").textContent = toHex(bytes);
+
+    // Kurz nach eigenem Schreiben eingehende Pakete ignorieren, um Race Conditions
+    // zu vermeiden (Rolle könnte sonst gerade erst übernommene Werte sofort wieder überschreiben).
+    if (Date.now() - lastWriteTime < 1200) return;
+
+    const result = parseNotification(bytes);
+    if (result.type === "status") {
+      document.getElementById("reportedBrake").textContent = result.brakeLevel;
+      document.getElementById("reportedMode").textContent = (MODES[result.modeIndex] || {}).name || "?";
+      document.getElementById("reportedDistance").textContent = `${result.lastCastDistanceM.toFixed(1)} m`;
+      document.getElementById("reportedSpeed").textContent = `${result.maxSpeedRpm} rpm`;
+    } else if (result.type === "deviceInfo") {
+      log("Hardware-Konfigurationspaket empfangen, übersprungen.");
+    } else if (result.type === "castHistory") {
+      log("Historisches Wurfdatenpaket empfangen, übersprungen.");
+    } else {
+      log("Unbekanntes Frame: " + toHex(result.raw));
+    }
+  }
+
+  // ================= UI-Wiring =================
+
+  function renderModeGrid() {
+    const grid = document.getElementById("modeGrid");
+    grid.innerHTML = "";
+    MODES.forEach(m => {
+      const btn = document.createElement("button");
+      btn.className = "mode-btn" + (state.mode === m.id ? " selected" : "");
+      btn.textContent = m.name;
+      btn.addEventListener("click", () => { state.mode = m.id; renderModeGrid(); sendFrame(buildCommandFrame(state)); });
+      grid.appendChild(btn);
+    });
+  }
+
+  function renderBrake() { document.getElementById("brakeReadout").textContent = state.brakeLevel; }
+
+  document.getElementById("brakeUp").addEventListener("click", () => {
+    state.brakeLevel = Math.min(12, state.brakeLevel + 1);
+    renderBrake();
+    sendFrame(buildCommandFrame(state));
+  });
+  document.getElementById("brakeDown").addEventListener("click", () => {
+    state.brakeLevel = Math.max(1, state.brakeLevel - 1);
+    renderBrake();
+    sendFrame(buildCommandFrame(state));
+  });
+
+  function bindSlider(id, valId, format, onChange) {
+    const el = document.getElementById(id);
+    const valEl = document.getElementById(valId);
+    el.addEventListener("input", () => { valEl.textContent = format(parseInt(el.value, 10)); });
+    el.addEventListener("change", () => { onChange(parseInt(el.value, 10)); sendFrame(buildCommandFrame(state)); });
+  }
+
+  bindSlider("sliderFine", "valFine", v => `${v}%`, v => { state.fineTune = v; });
+  bindSlider("sliderFront", "valFront", v => `${v}%`, v => { state.frontBrake = v; });
+  bindSlider("sliderRear", "valRear", v => `${v}%`, v => { state.rearBrake = v; });
+  bindSlider("sliderTarget", "valTarget", v => v === 0 ? "Aus" : `${v} m`, v => { state.targetDistance = v; });
+  bindSlider("sliderStandby", "valStandby", v => {
+    const m = Math.floor(v / 60), s = v % 60;
+    return s === 0 ? `${m} Min.` : `${m} Min. ${s}s`;
+  }, v => { state.standbySeconds = v; });
+
+  document.getElementById("spoolSelect").addEventListener("change", (e) => {
+    state.spoolSound = parseInt(e.target.value, 10);
+    sendFrame(buildCommandFrame(state));
+  });
+  document.getElementById("reelModelSelect").addEventListener("change", (e) => {
+    state.reelModel = parseInt(e.target.value, 10);
+    sendFrame(buildCommandFrame(state));
+  });
+
+  const TOGGLES = [
+    { key: "mute", title: "Stumm", desc: "Schaltet alle Töne der Rolle aus." },
+    { key: "waterLandingBrake", title: "Wasserlandungs-Bremse", desc: "Verhindert Überlaufen der Spule beim Auftreffen auf das Wasser." },
+    { key: "ledEffects", title: "LED-Lichteffekte", desc: "Aktiviert die LED-Farbspiele an der Rolle." },
+    { key: "disableDcSound", title: "DC-Summen aus", desc: "Deaktiviert das elektronische Bremsgeräusch." },
+    { key: "castMelody", title: "Wurf-Melodie", desc: "Spielt eine Tonfolge während des Auswerfens ab." },
+    { key: "smartBrake", title: "Intelligente Automatikbremse", desc: "Regelt automatisch; manuelle Einstellungen werden ggf. überschrieben." },
+    { key: "antiTheft", title: "Diebstahlschutz", desc: "Aktiviert die Passwortsperre der Rolle." }
+  ];
+
+  function renderToggles() {
+    const list = document.getElementById("toggleList");
+    list.innerHTML = "";
+    TOGGLES.forEach(t => {
+      const item = document.createElement("div");
+      item.className = "toggle-item";
+      item.innerHTML = `
+        <div class="toggle-info">
+          <span class="toggle-title">${t.title}</span>
+          <span class="toggle-desc">${t.desc}</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" ${state[t.key] ? "checked" : ""}>
+          <span class="slider-switch"></span>
+        </label>`;
+      const input = item.querySelector("input");
+      input.addEventListener("change", () => {
+        state[t.key] = input.checked;
+        sendFrame(buildCommandFrame(state));
+      });
+      list.appendChild(item);
+    });
+  }
+
+  const ADVANCED_FIELDS = [
+    ["voice", "Systemstimme (byte60)"], ["byte10", "byte10"], ["byte11", "byte11"], ["byte12", "byte12"],
+    ["byte17", "byte17 (evtl. Vorbremse-Dup.)"], ["byte18", "byte18 (evtl. Rückbremse-Dup.)"],
+    ["byte13", "byte13"], ["byte14", "byte14"], ["byte15", "byte15"], ["byte16", "byte16"],
+    ["byte19", "byte19"], ["byte20", "byte20"], ["byte21", "byte21"], ["byte22", "byte22"],
+    ["byte23", "byte23"], ["byte24", "byte24"], ["byte25", "byte25"], ["byte26", "byte26"],
+    ["byte27", "byte27"], ["byte28", "byte28"], ["byte29", "byte29"], ["byte30", "byte30"],
+    ["byte31", "byte31"], ["byte32", "byte32"]
+  ];
+
+  function renderAdvancedGrid() {
+    const grid = document.getElementById("advancedGrid");
+    grid.innerHTML = "";
+    ADVANCED_FIELDS.forEach(([key, label]) => {
+      const wrap = document.createElement("div");
+      wrap.className = "byte-field";
+      const lab = document.createElement("label");
+      lab.textContent = label;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.max = "255";
+      input.value = state[key];
+      input.addEventListener("change", () => {
+        let v = parseInt(input.value, 10);
+        if (isNaN(v)) v = 0;
+        v = Math.max(0, Math.min(255, v));
+        state[key] = v;
+        input.value = v;
+      });
+      wrap.appendChild(lab);
+      wrap.appendChild(input);
+      grid.appendChild(wrap);
+    });
+  }
+
+  document.getElementById("saveBtn").addEventListener("click", () => sendFrame(buildCommandFrame(state)));
+  document.getElementById("sendExtendedBtn").addEventListener("click", () => sendFrame(buildExtendedSettingsFrame(state)));
+  document.getElementById("connectBtn").addEventListener("click", connect);
+  document.getElementById("disconnectBtn").addEventListener("click", disconnect);
+
+  // ================= Init =================
+
+  if (!navigator.bluetooth) {
+    document.getElementById("unsupportedWarning").hidden = false;
+    document.getElementById("connectBtn").disabled = true;
+  }
+
+  const savedUuid = localStorage.getItem("reel_svc_uuid");
+  if (savedUuid) document.getElementById("svcUuid").value = savedUuid;
+
+  renderModeGrid();
+  renderBrake();
+  renderToggles();
+  renderAdvancedGrid();
+  setStatus("disconnected");
+</script>
