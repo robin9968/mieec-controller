@@ -420,6 +420,20 @@
   ];
 
   let device = null, server = null, writeChar = null, notifyChar = null;
+  let hasSyncedFromReel = false;
+
+  const STORAGE_KEY = "reel_state_v1";
+
+  function saveStateLocal() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function loadStateLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) Object.assign(state, JSON.parse(raw));
+    } catch (e) {}
+  }
 
   function describeProps(p) {
     const parts = [];
@@ -545,7 +559,7 @@
       }
 
       setStatus("connected");
-      await sendFrame(buildCommandFrame(state));
+      log("Verbunden. Warte auf Statusmeldung der Rolle, bevor irgendetwas gesendet wird …");
     } catch (e) {
       log("Fehler: " + e.message);
       setStatus("failed", e.message);
@@ -560,6 +574,7 @@
     log("Getrennt");
     writeChar = null;
     notifyChar = null;
+    hasSyncedFromReel = false;
     setStatus("disconnected");
     document.getElementById("devicePill").hidden = true;
   }
@@ -576,6 +591,7 @@
         await writeChar.writeValueWithResponse(bytes);
       }
       log("Gesendet: " + toHex(bytes));
+      saveStateLocal();
     } catch (e) {
       log("Schreibfehler: " + e.message);
     }
@@ -595,6 +611,15 @@
       document.getElementById("reportedMode").textContent = (MODES[result.modeIndex] || {}).name || "?";
       document.getElementById("reportedDistance").textContent = `${result.lastCastDistanceM.toFixed(1)} m`;
       document.getElementById("reportedSpeed").textContent = `${result.maxSpeedRpm} rpm`;
+
+      // Erste Statusmeldung nach dem Verbinden: unseren (evtl. veralteten, lokal
+      // gespeicherten) Zustand durch das ersetzen, was die Rolle tatsächlich meldet –
+      // NICHT umgekehrt, sonst würde ein Neuverbinden versehentlich die Rolle mit
+      // alten lokalen Werten überschreiben.
+      if (!hasSyncedFromReel) {
+        hasSyncedFromReel = true;
+        syncFromReelStatus(result);
+      }
     } else if (result.type === "deviceInfo") {
       log("Hardware-Konfigurationspaket empfangen, übersprungen.");
     } else if (result.type === "castHistory") {
@@ -726,6 +751,48 @@
     });
   }
 
+  // Setzt alle Bedienelemente aus dem aktuellen `state` neu auf (nach dem Laden aus dem
+  // lokalen Speicher oder nach einem Sync von der Rolle) – ohne dabei etwas zu senden.
+  function renderAll() {
+    renderModeGrid();
+    renderBrake();
+
+    document.getElementById("sliderFine").value = state.fineTune;
+    document.getElementById("valFine").textContent = `${state.fineTune}%`;
+    document.getElementById("sliderFront").value = state.frontBrake;
+    document.getElementById("valFront").textContent = `${state.frontBrake}%`;
+    document.getElementById("sliderRear").value = state.rearBrake;
+    document.getElementById("valRear").textContent = `${state.rearBrake}%`;
+    document.getElementById("sliderTarget").value = state.targetDistance;
+    document.getElementById("valTarget").textContent = state.targetDistance === 0 ? "Aus" : `${state.targetDistance} m`;
+
+    document.getElementById("sliderStandby").value = state.standbySeconds;
+    const m = Math.floor(state.standbySeconds / 60), s = state.standbySeconds % 60;
+    document.getElementById("valStandby").textContent = s === 0 ? `${m} Min.` : `${m} Min. ${s}s`;
+
+    document.getElementById("spoolSelect").value = state.spoolSound;
+    document.getElementById("reelModelSelect").value = state.reelModel;
+
+    renderToggles();
+    renderAdvancedGrid();
+  }
+
+  // Übernimmt eine von der Rolle gemeldete Statusmeldung in unseren lokalen Zustand
+  // (nicht umgekehrt) und aktualisiert alle Bedienelemente entsprechend, OHNE etwas
+  // zurückzusenden – reines Auslesen.
+  function syncFromReelStatus(result) {
+    state.mode = result.modeIndex;
+    state.brakeLevel = result.brakeLevel;
+    state.fineTune = result.fineTune;
+    state.standbySeconds = result.standbySeconds;
+    state.targetDistance = result.targetDistance;
+    if (result.frontBrake !== undefined) state.frontBrake = result.frontBrake;
+    if (result.rearBrake !== undefined) state.rearBrake = result.rearBrake;
+    renderAll();
+    saveStateLocal();
+    log("Zustand von der Rolle übernommen (nichts gesendet).");
+  }
+
   document.getElementById("saveBtn").addEventListener("click", () => sendFrame(buildCommandFrame(state)));
   document.getElementById("sendExtendedBtn").addEventListener("click", () => sendFrame(buildExtendedSettingsFrame(state)));
   document.getElementById("connectBtn").addEventListener("click", connect);
@@ -741,9 +808,7 @@
   const savedUuid = localStorage.getItem("reel_svc_uuid");
   if (savedUuid) document.getElementById("svcUuid").value = savedUuid;
 
-  renderModeGrid();
-  renderBrake();
-  renderToggles();
-  renderAdvancedGrid();
+  loadStateLocal();
+  renderAll();
   setStatus("disconnected");
 </script>
