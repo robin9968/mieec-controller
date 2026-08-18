@@ -212,6 +212,25 @@
     </details>
   </section>
 
+  <section class="card">
+    <p class="eyebrow">Einstellungen sichern</p>
+    <p class="help" style="margin-top: 0;">
+      Dieser Browser behält keinen Speicher über einen kompletten Neustart hinweg. Am zuverlässigsten:
+      <strong>ein Lesezeichen auf diese Seite setzen</strong>, sobald deine Einstellungen passen – die URL enthält sie automatisch.
+      Alternativ hier den Code sichern (z.B. in die Notizen-App) und später wieder einfügen.
+    </p>
+    <div class="field-row" style="margin-top: 10px;">
+      <div>
+        <label for="stateCode">Einstellungs-Code</label>
+        <input type="text" id="stateCode" readonly>
+      </div>
+    </div>
+    <div class="actions" style="margin-top: 10px;">
+      <button id="copyStateBtn">Code kopieren</button>
+      <button id="importStateBtn">Code einfügen &amp; laden</button>
+    </div>
+  </section>
+
   <section class="card" id="liveStatusCard" hidden>
     <p class="eyebrow">Status (von der Rolle gemeldet)</p>
     <div class="status-grid">
@@ -435,6 +454,35 @@
     } catch (e) {}
   }
 
+  // Bluefy/WebBLE behalten localStorage nicht über einen echten Neustart der App hinweg –
+  // deshalb zusätzlich der Zustand direkt in der URL kodiert. Ein Lesezeichen auf die
+  // aktuelle URL (WebBLE unterstützt das) speichert damit den Stand zuverlässig, unabhängig
+  // vom Browser-Speicher.
+  function encodeStateToHash() {
+    try {
+      const json = JSON.stringify(state);
+      history.replaceState(null, "", "#s=" + encodeURIComponent(json));
+    } catch (e) {}
+  }
+
+  function loadStateFromHash() {
+    const hash = location.hash;
+    const marker = "#s=";
+    if (!hash.startsWith(marker)) return false;
+    try {
+      const json = decodeURIComponent(hash.slice(marker.length));
+      Object.assign(state, JSON.parse(json));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function persistState() {
+    saveStateLocal();
+    encodeStateToHash();
+  }
+
   function describeProps(p) {
     const parts = [];
     if (p.read) parts.push("read");
@@ -591,7 +639,7 @@
         await writeChar.writeValueWithResponse(bytes);
       }
       log("Gesendet: " + toHex(bytes));
-      saveStateLocal();
+      persistState();
     } catch (e) {
       log("Schreibfehler: " + e.message);
     }
@@ -753,9 +801,15 @@
 
   // Setzt alle Bedienelemente aus dem aktuellen `state` neu auf (nach dem Laden aus dem
   // lokalen Speicher oder nach einem Sync von der Rolle) – ohne dabei etwas zu senden.
+  function renderStateCode() {
+    const el = document.getElementById("stateCode");
+    if (document.activeElement !== el) el.value = JSON.stringify(state);
+  }
+
   function renderAll() {
     renderModeGrid();
     renderBrake();
+    renderStateCode();
 
     document.getElementById("sliderFine").value = state.fineTune;
     document.getElementById("valFine").textContent = `${state.fineTune}%`;
@@ -789,7 +843,7 @@
     if (result.frontBrake !== undefined) state.frontBrake = result.frontBrake;
     if (result.rearBrake !== undefined) state.rearBrake = result.rearBrake;
     renderAll();
-    saveStateLocal();
+    persistState();
     log("Zustand von der Rolle übernommen (nichts gesendet).");
   }
 
@@ -797,6 +851,36 @@
   document.getElementById("sendExtendedBtn").addEventListener("click", () => sendFrame(buildExtendedSettingsFrame(state)));
   document.getElementById("connectBtn").addEventListener("click", connect);
   document.getElementById("disconnectBtn").addEventListener("click", disconnect);
+
+  document.getElementById("copyStateBtn").addEventListener("click", async () => {
+    const el = document.getElementById("stateCode");
+    el.focus();
+    el.select();
+    try {
+      await navigator.clipboard.writeText(el.value);
+      log("Einstellungs-Code kopiert.");
+    } catch (e) {
+      try {
+        document.execCommand("copy");
+        log("Einstellungs-Code kopiert.");
+      } catch (e2) {
+        log("Kopieren fehlgeschlagen – Text ist markiert, manuell kopieren.");
+      }
+    }
+  });
+
+  document.getElementById("importStateBtn").addEventListener("click", () => {
+    const raw = document.getElementById("stateCode").value;
+    try {
+      const parsed = JSON.parse(raw);
+      Object.assign(state, parsed);
+      renderAll();
+      persistState();
+      log("Einstellungs-Code geladen.");
+    } catch (e) {
+      log("Einstellungs-Code ungültig, konnte nicht geladen werden.");
+    }
+  });
 
   // ================= Init =================
 
@@ -808,7 +892,8 @@
   const savedUuid = localStorage.getItem("reel_svc_uuid");
   if (savedUuid) document.getElementById("svcUuid").value = savedUuid;
 
-  loadStateLocal();
+  const restoredFromUrl = loadStateFromHash();
+  if (!restoredFromUrl) loadStateLocal();
   renderAll();
   setStatus("disconnected");
 </script>
