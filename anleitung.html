@@ -1,0 +1,310 @@
+<title>Bremskurve Erklärt</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #12100d;
+    --surface: #1c1914;
+    --surface-2: #262119;
+    --line: #3a3226;
+    --text: #f2e9d8;
+    --text-dim: #a89d8b;
+    --text-faint: #6b6255;
+    --accent: #e8934a;
+    --accent-dim: #8a5a31;
+    --good: #7fae6e;
+    --warn: #d9b23d;
+    --critical: #d1594a;
+    --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Semibold", system-ui, sans-serif;
+    --font-body: -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  header.page {
+    padding-bottom: 28px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+  }
+  header.page .kicker {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 10px;
+  }
+  header.page h1 { font-family: var(--font-display); font-size: 30px; font-weight: 700; margin: 0 0 10px; text-wrap: balance; }
+  header.page p { font-size: 15px; color: var(--text-dim); line-height: 1.6; max-width: 62ch; margin: 0; }
+
+  section { margin-bottom: 40px; }
+  section > h2 {
+    font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 0 0 6px;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  section > h2 .byte-tag {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 400; color: var(--text-faint);
+    background: var(--surface-2); border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px;
+  }
+  section > .lede { font-size: 14px; color: var(--text-dim); margin: 0 0 18px; max-width: 64ch; line-height: 1.6; }
+
+  .prose { font-size: 15.5px; line-height: 1.7; max-width: 64ch; color: var(--text); }
+  .prose p { margin: 0 0 14px; }
+  .prose p:last-child { margin-bottom: 0; }
+  .prose strong { color: var(--accent); font-weight: 600; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; }
+
+  .profile-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 16px; }
+  @media (min-width: 560px) { .profile-grid { grid-template-columns: 1fr 1fr; } }
+  .profile-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .profile-card .name { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--accent); margin-bottom: 6px; }
+  .profile-card .cn { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); margin-bottom: 8px; }
+  .profile-card p { font-size: 13.5px; color: var(--text-dim); line-height: 1.55; margin: 0; }
+
+  /* Wurf-Zeitleiste */
+  .timeline { display: flex; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); margin: 18px 0 10px; }
+  .timeline .phase { flex: 1; padding: 14px 12px; text-align: center; position: relative; }
+  .timeline .phase:not(:last-child)::after {
+    content: ""; position: absolute; right: 0; top: 10%; bottom: 10%; width: 1px; background: var(--line);
+  }
+  .timeline .phase.start { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+  .timeline .phase.flight { background: var(--surface); }
+  .timeline .phase.landing { background: color-mix(in srgb, var(--critical) 18%, var(--surface)); }
+  .timeline .phase .label { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); margin-bottom: 4px; }
+  .timeline .phase .control { font-family: var(--font-display); font-weight: 600; font-size: 13.5px; color: var(--text); }
+  .timeline-caption { font-size: 12px; color: var(--text-faint); text-align: center; font-family: var(--font-mono); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); font-weight: 500; }
+  td { color: var(--text-dim); }
+  td.field { color: var(--text); font-family: var(--font-mono); font-size: 12.5px; }
+  td:last-child, th:last-child { text-align: right; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  .table-wrap table { min-width: 480px; }
+  .table-wrap tr:last-child td { border-bottom: none; }
+
+  .status-chip { font-family: var(--font-mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; display: inline-block; }
+  .status-chip.confirmed { color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent); border: 1px solid color-mix(in srgb, var(--good) 40%, var(--line)); }
+  .status-chip.unconfirmed { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); }
+
+  .toggle-list { display: flex; flex-direction: column; gap: 14px; }
+  .toggle-list dt { font-family: var(--font-display); font-weight: 600; font-size: 14.5px; color: var(--text); }
+  .toggle-list dd { font-size: 13.5px; color: var(--text-dim); margin: 3px 0 0; line-height: 1.55; }
+
+  footer {
+    margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--text-faint); font-family: var(--font-mono); line-height: 1.6;
+  }
+</style>
+
+<main>
+  <header class="page">
+    <p class="kicker">Referenz · DMK SilverFeather ETA Plus DC</p>
+    <h1>Was welcher Regler wirklich macht</h1>
+    <p>
+      Aus dem Bluetooth-Protokoll der Original-App reverse-engineered. Die Bremse dieser Rolle ist digital (DC) und
+      passt die Bremskraft <strong>während des Wurfs dynamisch an</strong> statt sie konstant zu halten – deshalb gibt
+      es mehrere Regler statt nur eines.
+    </p>
+  </header>
+
+  <section>
+    <h2>Bremsstufe <span class="byte-tag">mcu_byte2 · 1–12</span></h2>
+    <p class="lede">Der Hauptregler in der App.</p>
+    <div class="prose">
+      <p>
+        Die <strong>Grundstärke</strong> der Bremse insgesamt – vergleichbar mit dem mechanischen Bremsrad an
+        klassischen Multirollen. <strong>Höher</strong> = mehr Widerstand = kürzere Würfe, aber sicherer gegen
+        Perücken (Backlash). <strong>Niedriger</strong> = weniger Widerstand = weitere Würfe, aber mehr Fingerspitzengefühl
+        nötig, um die Spule per Daumen zu kontrollieren.
+      </p>
+      <p>
+        Das ist der Wert, an dem du in der Praxis zuerst drehst – die übrigen Regler unten verfeinern, <em>wie</em>
+        diese Grundstärke über den Wurfverlauf verteilt wird.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Bremskurve <span class="byte-tag">byte3, byte7, byte8, byte9</span></h2>
+    <p class="lede">Wann während des Wurfs welche Bremse greift.</p>
+
+    <div class="timeline">
+      <div class="phase start">
+        <div class="label">Start</div>
+        <div class="control">Vorbremse</div>
+      </div>
+      <div class="phase flight">
+        <div class="label">Flugphase</div>
+        <div class="control">Bremsstufe</div>
+      </div>
+      <div class="phase landing">
+        <div class="label">Landung</div>
+        <div class="control">Rückbremse</div>
+      </div>
+    </div>
+    <p class="timeline-caption">Spule beschleunigt → volle Fahrt → Spule muss wieder abbremsen</p>
+
+    <div class="prose" style="margin-top: 18px;">
+      <p>
+        <strong>Vorbremse</strong> (Anfangsphase) wirkt in dem Moment, in dem der Köder den Rutenspitze verlässt und
+        die Spule von null auf Maximaldrehzahl beschleunigt. Genau hier entsteht ein Backlash am häufigsten, wenn die
+        Spule schneller beschleunigt, als Schnur abgegeben werden kann.
+      </p>
+      <p>
+        <strong>Rückbremse</strong> (Landephase) wirkt am Ende des Wurfs, wenn der Köder abbremst, die Spule aber
+        eigentlich weiterdrehen will – der klassische Moment für eine Perücke kurz vor dem Aufschlag.
+      </p>
+      <p>
+        <strong>Feineinstellung</strong> (0–100 %) ist ein Offset auf die Bremsstufe insgesamt – für feinere
+        Zwischenschritte, als die 12 Stufen es hergeben, ohne gleich ein ganzes Bremsprofil zu wechseln.
+      </p>
+      <p>
+        <strong>Zielwurf-Distanzbremse</strong> (0–50 m, 0 = aus) ist ein separater Mechanismus: Die Rolle zählt
+        Spulenumdrehungen und schätzt daraus die ausgeworfene Distanz. Ab der eingestellten Zielweite bremst sie
+        zusätzlich ab – nützlich, um gezielt eine bestimmte Distanz zu treffen (z. B. an Strukturen), statt immer auf
+        Maximalweite zu werfen.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Bremsprofile <span class="byte-tag">mcu_byte1</span></h2>
+    <p class="lede">Fünf vorgefertigte Kurvenformen für unterschiedliche Köder und Erfahrungslevel.</p>
+    <div class="profile-grid">
+      <div class="profile-card">
+        <div class="name">Experte</div>
+        <div class="cn">大师模式</div>
+        <p>Flachere, aggressivere Kurve für maximale Weite. Verlangt mehr Daumenkontrolle – für erfahrene Werfer.</p>
+      </div>
+      <div class="profile-card">
+        <div class="name">Allround</div>
+        <div class="cn">泛用模式</div>
+        <p>Ausgewogener Standard für die meisten Köder und Bedingungen. Guter Startpunkt.</p>
+      </div>
+      <div class="profile-card">
+        <div class="name">BFS</div>
+        <div class="cn">微物模式</div>
+        <p>Bait Finesse System – für sehr leichte Köder (typ. unter 5 g), die zu wenig Schwung haben, um die Spule
+          konstant zu treiben. Sanftere, gleichmäßigere Bremsung.</p>
+      </div>
+      <div class="profile-card">
+        <div class="name">Wind</div>
+        <div class="cn">风阻模式</div>
+        <p>Kompensiert Windwiderstand: Eine Böe kann den Köder abrupt bremsen, während die Spule noch auf Drehzahl
+          ist. Mehr Bremskraft in der Spätphase.</p>
+      </div>
+      <div class="profile-card">
+        <div class="name">Training</div>
+        <div class="cn">练习模式</div>
+        <p>Konservative, sichere Kurve zum Werfen-Lernen – priorisiert Perücken-Vermeidung vor Weite.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>System <span class="byte-tag">byte4, byte5, byte61</span></h2>
+    <div class="prose">
+      <p>
+        <strong>Standby-Abschaltung</strong> schaltet die Elektronik nach der eingestellten Zeit ohne Nutzung ab, um
+        Akku zu sparen.
+      </p>
+      <p>
+        <strong>Wurfsound-Modus</strong> wählt zwischen drei Klangprofilen für den Sound beim Auswerfen – rein
+        akustisch, ohne Einfluss auf die Bremse.
+      </p>
+      <p>
+        <strong>Rollentyp</strong> gibt der Rolle vor, welche Spulenvariante verbaut ist (Weitwurf-Spule,
+        BFS-Spule, Allround-Spule, Spule für schwere Köder). Das kalibriert intern die Umrechnung
+        „Spulenumdrehungen → geschätzte Meter Schnur", die für die Distanzanzeige und die Zielwurf-Distanzbremse
+        gebraucht wird. Falsch eingestellt, stimmen vor allem die Distanzangaben nicht.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Optionen</h2>
+    <dl class="toggle-list">
+      <div><dt>Stumm</dt><dd>Schaltet alle Töne der Rolle aus.</dd></div>
+      <div><dt>Wasserlandungs-Bremse</dt><dd>Zusätzliche Bremse genau im Moment, in dem der Köder auf dem Wasser aufschlägt – verhindert Überlaufen der Spule nach dem Aufprall.</dd></div>
+      <div><dt>LED-Lichteffekte</dt><dd>Kosmetische Beleuchtung an der Rolle.</dd></div>
+      <div><dt>DC-Summen aus</dt><dd>Deaktiviert das hörbare elektronische Surren des Brems-Solenoids.</dd></div>
+      <div><dt>Wurf-Melodie</dt><dd>Spielt eine kurze Tonfolge während des Auswerfens – zusätzlich zum Wurfsound-Modus.</dd></div>
+      <div><dt>Intelligente Automatikbremse</dt><dd>Vollautomatische, adaptive Bremsregelung. Überschreibt vermutlich manuelle Einstellungen, solange aktiv.</dd></div>
+      <div><dt>Diebstahlschutz</dt><dd>Aktiviert die Passwortsperre der Rolle.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Die unbestätigten Felder</h2>
+    <div class="prose">
+      <p>
+        Das Bluetooth-Kommando ist ein 20-Byte-Paket mit fester Struktur – <strong>welche Byte-Position welchen Wert
+        trägt, ist zweifelsfrei</strong> (aus dem Original-App-Code extrahiert und über zwei unabhängige
+        Analyse-Durchläufe gegengeprüft). Unsicher ist bei einem Teil der Felder nur, <strong>was der Wert an der
+        Rolle tatsächlich bewirkt</strong> – weil sich das nur durch Ausprobieren am echten Gerät zeigt, nicht durch
+        Codelesen allein.
+      </p>
+      <p>
+        Die <strong>Systemstimme</strong> (Sprachansagen) steht zwar als Regler im Original-App-Code, wird dort aber
+        nachweislich in keinem der von uns gefundenen Sende-Kommandos tatsächlich mitgeschickt – vermutlich läuft sie
+        über ein drittes Kommando, das wir bisher nicht identifiziert haben. Ändern in unserer App bewirkt daher
+        aktuell wahrscheinlich nichts an der Rolle.
+      </p>
+      <p>
+        Der <strong>zweite Frame</strong> (Bytes 13–32, „Erweitert senden") ist strukturell separat von der
+        Haupteinstellung und entspricht im Original der Tastenbelegung der Seitenabdeckung sowie
+        Bewegungssensor-Gesten. Die Byte-Reihenfolge ist bestätigt, die einzelnen Werte darin nicht.
+      </p>
+      <p>
+        Die Bytes 10, 11, 12, 17 und 18 im Hauptpaket haben eine bestätigte Position, aber unbekannte Bedeutung –
+        möglich sind reservierte/ungenutzte Bytes oder noch nicht identifizierte Funktionen.
+      </p>
+      <p>
+        Wenn du Lust hast, hier weiterzuforschen: In der App unter „Erweitert" lässt sich jedes dieser Bytes einzeln
+        setzen. Ein Wert ändern, „Erweitert senden" drücken, an der Rolle beobachten – das ist im Kern dieselbe
+        Methode, mit der die bestätigten Felder oben identifiziert wurden.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Alle Felder auf einen Blick</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Feld</th><th>Bereich</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="field">Modus (byte1)</td><td>5 Profile</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Bremsstufe (byte2)</td><td>1–12</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Feineinstellung (byte3)</td><td>0–100 %</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Wurfsound (byte4)</td><td>3 Modi</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Standby-Timer (byte5)</td><td>60–900 s</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Zielwurf-Distanz (byte7)</td><td>0–50 m</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Vorbremse (byte8)</td><td>0–100 %</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Rückbremse (byte9)</td><td>0–100 %</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Rollentyp (byte61)</td><td>4 Typen</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Optionen (bool1–7)</td><td>an/aus</td><td><span class="status-chip confirmed">bestätigt</span></td></tr>
+          <tr><td class="field">Systemstimme (byte60)</td><td>9 Stimmen</td><td><span class="status-chip unconfirmed">unbestätigt</span></td></tr>
+          <tr><td class="field">byte10, 11, 12, 17, 18</td><td>0–255</td><td><span class="status-chip unconfirmed">unbestätigt</span></td></tr>
+          <tr><td class="field">2. Frame: byte13–32</td><td>0–255</td><td><span class="status-chip unconfirmed">unbestätigt</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Reverse-engineered aus der offiziellen MIEC-WeChat-Mini-App. Kein offizielles Dokument des Herstellers.
+  </footer>
+</main>
